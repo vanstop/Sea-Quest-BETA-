@@ -1,0 +1,357 @@
+<meta charset="utf-8">
+<html>
+	<head>
+		<title>Mini Game - ShootUp</title>
+		<script>
+		var estados = {menu:0,jogo:1,creditos:2,configuracao:3,hallDaFama:4};
+		var canvas, context;
+		var player = {img:null,x:0,y:0,v:3,d:1, oxigenio: 100};
+		var mergulhador = {x:0, y:0, xRec1:260, yRec1:0, xRec2:310, yRec2:0, w:45, h:50};
+		var mouse = {x:0,y:0,botaoMousePressionado:false};
+        var submarinos = [];
+		var estadoDoJogo = estados.menu;
+		var imagemMenu, imagemTiro, imagemFundo, imagemSprites; 
+		var somTiro, somMusica;
+		var estadoAnterior;
+		var tiros = [];
+		var MAX_TIROS = 25;
+        var NUM_INIMIGOS = 5;
+		var TECLA_W_PRESSIONADA, TECLA_A_PRESSIONADA, TECLA_S_PRESSIONADA, TECLA_D_PRESSIONADA;
+		var contFrame = 0;
+		var Pontos = 0;
+		
+		function Inicializar(){
+			canvas = document.getElementById('canvas');
+			context = canvas.getContext('2d');
+
+			ConfiguraPlayer();
+			ConfiguraImagens();
+            ConfiguraInimigos();
+		
+			setInterval(Loop, 1000/60);
+		}
+            
+        function ConfiguraInimigos(){
+            
+            for(var i = 0; i < NUM_INIMIGOS; i++){
+                submarinos[i] = {
+                    x:Math.random() * canvas.width,// + canvas.width,
+                    y:(Math.random() * (canvas.height - 325) + 160),
+					largura: 50,
+                    velocidade:Math.random() * 10,
+                    vivo:true};
+            }
+			
+			mergulhador.x = Math.random() * canvas.width;
+			mergulhador.y = Math.random() * (canvas.height - 325) + 160;
+        }
+		
+		function ConfiguraPlayer(){
+			player.img = new Image();
+			player.img.src = 'player.png';
+		}
+		
+		function ConfiguraImagens(){
+			imagemSprites = new Image();
+			imagemSprites.src = 'sprites.png';
+		
+			imagemFundo = new Image();
+			imagemFundo.src = 'fundo.png';
+		
+			imagemMira  = new Image();
+			imagemMira.src = 'mira.png';		
+			
+			imagemMenu  = new Image();
+			imagemMenu.src = 'capa_cartucho.jpg';
+
+			imagemTiro  = new Image();
+			imagemTiro.src = 'bala.png';						
+		}
+		
+		function Loop(){
+			Atualizar();
+			Desenhar();
+			mouse.botaoMousePressionado = false;
+		}
+		
+		function Atualizar(){
+			switch(estadoDoJogo)
+			{
+				case estados.menu:
+					AtualizaMenu();
+					break;
+				case estados.jogo:
+					AtualizaJogo();
+					break;
+				case estados.creditos:
+					AtualizaConfiguracao();
+					break;
+			}	
+		}
+		
+		function AtualizaMenu(){
+		}
+		
+		function AtualizaJogo(){
+			
+			if (TECLA_W_PRESSIONADA) player.y -= player.v;
+			if (TECLA_A_PRESSIONADA)
+			{
+				player.x -= player.v;
+				player.d = -1;
+			}
+			if (TECLA_S_PRESSIONADA) player.y += player.v;
+			if (TECLA_D_PRESSIONADA){
+				player.x += player.v;
+				player.d = 1;
+			} 
+			
+			if(player.y < 165){
+				if(player.oxigenio < 100) player.oxigenio ++;
+				player.y = 165;
+			}
+			if(player.y > 440) player.y = 440;
+			
+			if(player.x < 0) player.x = 0;
+			if(player.x > 656) player.x = 656;
+			
+			contFrame ++;
+			Pontos ++;
+			
+			if(contFrame >= 60){
+				contFrame = 0;
+				if(player.oxigenio > 0) player.oxigenio --;
+			}
+            
+            /*for(var i = 0; i < NUM_INIMIGOS; i++){
+                if(Colidindo(player, submarinos[i]))
+                   submarinos[i].vivo = false;
+            }*/
+		}
+		
+		function AtualizaConfiguracao(){
+		}
+		
+		function Desenhar(){
+			context.clearRect(0,0,canvas.width, canvas.height);
+			
+			switch(estadoDoJogo)
+			{
+				case estados.menu:
+					DesenhaMenu();
+					break;
+				case estados.jogo:
+					DesenhaJogo();
+					break;
+				case estados.creditos:
+					DesenhaConfiguracao();
+					break;
+			}	
+		}
+		
+		function DesenhaMenu(){
+			context.drawImage(imagemMenu, 0, 0, 512, 326,0, 0, 756, 652 );
+			
+			//context.font = '22px Arial';
+			//context.fillText(' fundo.x + fundo.img.width ' + (fundo.x + fundo.img.width), 50,50);
+			//context.fillText(' fundo.x  ' + fundo.x, 50,100);
+		}
+		
+		function DesenhaJogo(){
+			context.drawImage(imagemFundo, 0, 0);
+			AnimaTiros();
+            AnimaInimigos();
+			AnimaJogador();
+			AnimaOxigenio();
+			AnimaPontos();
+		}
+		
+		function AnimaPontos(){
+			context.fillStyle = "yellow";
+			context.textAlign = "center";
+			context.font="50px OCR";
+			context.fillText(Pontos,canvas.width/2,50);
+		}
+		
+		function AnimaJogador(){
+			context.save();
+			context.scale(player.d, 1);
+			context.drawImage(imagemSprites, 
+                              0, 0, 90, 50,
+                              player.x * player.d, player.y, 90 * player.d, 50);
+			context.restore();	
+		}
+		
+		
+		function AnimaOxigenio(){
+			context.drawImage(imagemSprites,
+                              365, 0, 315, 20,
+                              205, 548, 3.15 * player.oxigenio, 20);
+		}
+            
+            
+        function AnimaInimigos(){
+			//Desenha Submarinos
+            for(var i = 0; i < NUM_INIMIGOS; i++){
+				submarinos[i].x += submarinos[i].velocidade;
+				
+				if(submarinos[i].x > 756 ){
+					submarinos[i].y = Math.random() * (canvas.height - 325) + 160;
+					submarinos[i].x = -50; //Tamanho do submariono
+				}
+				
+                if(submarinos[i].vivo){
+                    context.drawImage(imagemSprites, 
+                              95, 5, 50, 45,
+                              submarinos[i].x, submarinos[i].y, 50, 45);
+				}else {
+					submarinos[i].y = Math.random() * (canvas.height - 325) + 160;
+					submarinos[i].x = -50; //Tamanho do submariono
+					submarinos[i].vivo = true;
+				}
+            }
+			
+			//Desenha Nadador
+			
+			mergulhador.x += 1;
+			
+			if(mergulhador.x > 756){
+				mergulhador.x = -50;
+				mergulhador.y = Math.random() * (canvas.height - 325) + 160;
+			}
+			
+			if(contFrame < 30){
+				context.drawImage(imagemSprites,
+								  mergulhador.xRec1, mergulhador.yRec1, mergulhador.w, mergulhador.h,
+								  mergulhador.x, mergulhador.y, mergulhador.w, mergulhador.h);
+			}else {
+				context.drawImage(imagemSprites,
+								  mergulhador.xRec2, mergulhador.yRec2, mergulhador.w, mergulhador.h,
+								  mergulhador.x, mergulhador.y, mergulhador.w, mergulhador.h);
+			}
+        }            
+		
+		function DesenhaConfiguracao(){
+		}
+            
+        function Colidindo(obj1, obj2){
+
+            var r1 = obj1.largura / 2;
+            var r2 = obj2.largura / 2;
+
+            var c1 = (obj1.x - obj2.x) + r1;
+            var c2 = (obj1.y - obj2.y) + r2;
+            var h = Math.sqrt(c1*c1 + c2*c2);
+            
+            
+            /*
+            if((r1 + r2) < h)
+                return true;
+            else
+                return false;
+            */
+            
+            return ((r1 + r2) > h);            
+        }
+		
+		
+		function MouseMove(e){
+			mouse.x = e.clientX;
+			mouse.y = e.clientY;
+		}
+		
+		function BotaoPressionado(e){
+			mouse.botaoMousePressionado = true;
+		}
+		
+		
+		function TeclaPressionada(e){
+			
+			if(e.keyCode == 13 && estadoDoJogo == estados.menu) //ENTER
+				estadoDoJogo = estados.jogo;
+
+			if(e.keyCode == 27 && estadoDoJogo == estados.jogo) //ESC
+				estadoDoJogo = estados.menu;
+				
+			if(e.keyCode == 32 && estadoDoJogo == estados.jogo) //ESPAÁO
+				DisparaTiros();
+				
+			if((e.keyCode == 87 || e.keyCode == 38)&& estadoDoJogo == estados.jogo) //W
+				TECLA_W_PRESSIONADA = true;
+				
+			if((e.keyCode == 65 || e.keyCode == 37)&& estadoDoJogo == estados.jogo) //A
+				TECLA_A_PRESSIONADA = true;
+			
+			if((e.keyCode == 83 || e.keyCode == 40)&& estadoDoJogo == estados.jogo) //S
+				TECLA_S_PRESSIONADA = true;
+	
+			if((e.keyCode == 68 || e.keyCode == 39)&& estadoDoJogo == estados.jogo) //D
+				TECLA_D_PRESSIONADA = true;
+			
+			if(estadoAnterior == estados.menu && estadoDoJogo == estados.jogo && somMusica.paused)
+				somMusica.play();
+
+			if(estadoAnterior == estados.jogo && estadoDoJogo == estados.menu && !somMusica.paused)
+				somMusica.pause();
+				
+			estadoAnterior = estadoDoJogo;
+		}
+		
+		function TeclaSolta(e){
+		
+			if((e.keyCode == 87 || e.keyCode == 38)&& estadoDoJogo == estados.jogo) //W
+				TECLA_W_PRESSIONADA = false;
+				
+			if((e.keyCode == 65 || e.keyCode == 37)&& estadoDoJogo == estados.jogo) //A
+				TECLA_A_PRESSIONADA = false;
+			
+			if((e.keyCode == 83 || e.keyCode == 40)&& estadoDoJogo == estados.jogo) //S
+				TECLA_S_PRESSIONADA = false;
+	
+			if((e.keyCode == 68 || e.keyCode == 39)&& estadoDoJogo == estados.jogo) //D
+				TECLA_D_PRESSIONADA = false;
+		}
+		
+		function DisparaTiros(){
+			if(tiros.length < MAX_TIROS){
+				tiros.push({largura: 42, ativo: true, x:player.x + (player.img.width / 2), y:player.y + (player.img.height / 2)});
+			}
+			else{
+				for(var i = 0; i < tiros.length; i++){
+					if(!tiros[i].ativo){
+						tiros[i] = {largura: 42, ativo: true, x:player.x + (player.img.width / 2), y:player.y + (player.img.height / 2)};
+						break;
+					}
+				}			
+			}
+		}
+		
+		function AnimaTiros(){
+			for(var i = 0; i < tiros.length; i++){
+				
+				for(var j = 0; j < NUM_INIMIGOS; j++){
+					if(Colidindo(tiros[i], submarinos[j]) && tiros[i].ativo){
+						submarinos[j].vivo = false;
+						tiros[i].ativo = false;
+					}
+				}
+			
+				if(tiros[i].ativo){
+					tiros[i].x += 10;
+					context.drawImage(imagemSprites, 
+                              154, 27, 42, 8,
+                              tiros[i].x, tiros[i].y, 42, 8);
+				}
+				
+				if(tiros[i].x > canvas.width)
+					tiros[i].ativo = false;
+			}
+		}
+		</script>
+	</head>	
+	<body onload="Inicializar();" onkeydown="TeclaPressionada(event);" onkeyup="TeclaSolta(event);">
+		<canvas style="background-color:black;cursor:none;" id="canvas" width="756" height="652" onmousemove="MouseMove(event);" onclick="BotaoPressionado(event);">
+		Erro no vanvas!
+		</canvas>
+	</body>
+</html>
